@@ -93,11 +93,9 @@ BEGIN
 	END
 END
 
-/*Almost finished
 CREATE PROCEDURE LibraryProject.spIssueCard
-	@CardKey INT,
-	@CardNum VARCHAR,
-	@UserNum INT,
+	@CardNum VARCHAR(11),
+	@UserKey INT,
 	@CardType INT
 AS
 BEGIN
@@ -107,10 +105,18 @@ BEGIN
 		UserKey,
 		CardTypeKey
 	)
-	VALUES (@CardKey,@CardNum,@UserNum,@CardType)
+	VALUES (@CardNum,@UserKey,@CardType)
 END;
 
-*/
+
+CREATE PROCEDURE LibraryProject.spDeactivateCard
+	@CardKey INT
+AS
+BEGIN
+	UPDATE LibraryProject.Cards
+	SET DeactivatedOn = GETDATE()
+	WHERE CardKey = @CardKey
+END;
 
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType @AssetType = 'ok';
@@ -125,7 +131,9 @@ EXEC LibraryProject.spAddOrUpdateUser @add_Update = 'add', @UserKey = '7', @Last
 
 EXEC LibraryProject.spAddOrUpdateUser @add_Update = 'update', @UserKey = '7', @LastName = 'Dirt',@FirstName = 'Joe',@Email = 'somthing@mail.com',@Address1 = '123N 456S',@Address2 = Null ,@City = 'the big city',@StateAbb = 'UT',@Bdate = '1-Jul-30' ,@Ruk = 1
 
-EXEC LibraryProject.spIssueCard @CardNum = 'C9079-647-9065',@UserNum,@CardType
+EXEC LibraryProject.spIssueCard @CardNum = 'C9079-647-9065',@UserKey = 7,@CardType = 1
+
+EXEC LibraryProject.spDeactivateCard @CardKey =  9
 
 select *from LibraryProject.AssetTypes
 select *from LibraryProject.Assets
