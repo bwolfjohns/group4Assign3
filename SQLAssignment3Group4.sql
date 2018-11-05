@@ -118,22 +118,32 @@ BEGIN
 	WHERE CardKey = @CardKey
 END;
 
+--Loan Assets
+CREATE PROCEDURE LibraryProject.spLoanAsset
+	@AssetKey
+	@
+AS
+BEGIN
+	UPDATE LibraryProject.Cards
+	SET DeactivatedOn = GETDATE()
+	WHERE CardKey = @CardKey
+END;
 /*Testing purposes
-EXEC LibraryProject.spCreateNewAssetType @AssetType = 'ok';
+EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 
-EXEC LibraryProject.spCreateAsset @Asset = 'a book',@AssetDescription = 'none',@AssetTypeKey = 1,@ReplacementCost = 20,@Restricted = 1;
+EXEC LibraryProject.spCreateAsset 'a book','none','1','20','1';
 
-EXEC LibraryProject.spUpdateAsset @AssetKey = 9, @Asset = 'a dvd',@AssetDescription = 'none',@AssetTypeKey = 2,@ReplacementCost = 20,@Restricted = 1;
+EXEC LibraryProject.spUpdateAsset  '9', 'a dvd','none', 2, 20, 1;
 
-EXEC LibraryProject.spDeactivateAsset @AssetKey = 9;
+EXEC LibraryProject.spDeactivateAsset '9';
 
-EXEC LibraryProject.spAddOrUpdateUser @add_Update = 'add', @UserKey = '7', @LastName = 'Dirt',@FirstName = 'Joe',@Email = 'somthing@mail.com',@Address1 = '123N 456S',@Address2 = Null ,@City = 'the big city',@StateAbb = 'UT',@Bdate = '1-Jul-30' ,@Ruk = 1
+EXEC LibraryProject.spAddOrUpdateUser 'add', '7', 'Adams', 'Joe', 'somthing@mail.com','123N 456S',Null, 'the big city','UT','1-Jul-30' , 1
 
-EXEC LibraryProject.spAddOrUpdateUser @add_Update = 'update', @UserKey = '7', @LastName = 'Dirt',@FirstName = 'Joe',@Email = 'somthing@mail.com',@Address1 = '123N 456S',@Address2 = Null ,@City = 'the big city',@StateAbb = 'UT',@Bdate = '1-Jul-30' ,@Ruk = 1
+EXEC LibraryProject.spAddOrUpdateUser 'update', '7', 'Hughes', 'John','somthing@mail.com','123N 456S', 'Null', 'the big city', 'UT', '1-Jul-30','1'
 
-EXEC LibraryProject.spIssueCard @CardNum = 'C9079-647-9065',@UserKey = 7,@CardType = 1
+EXEC LibraryProject.spIssueCard 'C9079-647-9065','7','1'
 
-EXEC LibraryProject.spDeactivateCard @CardKey =  9
+EXEC LibraryProject.spDeactivateCard '8'
 
 select *from LibraryProject.AssetTypes
 select *from LibraryProject.Assets
