@@ -335,7 +335,39 @@ END;
 CREATE OR ALTER TRIGGER LibraryProject.CheckLimitOfAssets
 ON LibraryProject.AssetLoans
 AFTER INSERT
+AS
+BEGIN
+	DECLARE @UserKey INT
+	DECLARE @UserCardType INT
+	DECLARE @ItemsLoaned INT
+	DECLARE @AssetLoanKeyID INT = inserted.AssetLoanKey
+	DECLARE @ErrorMsg varchar(50) = CONCAT('You have exceded the asset loan limit of ', @ItemsLoaned)
 
+	SELECT 
+		@ItemsLoaned = COUNT(AL.AssetLoanKey), 
+		@UserKey = CD.UserKey,
+		@UserCardType =  CD.CardTypeKey
+	FROM 
+		LibraryProject.Cards CD
+		INNER JOIN LibraryProject.AssetLoans AL ON CD.UserKey = AL.UserKey
+	WHERE 
+		AL.ReturnedOn IS NULL 
+		AND AL.LostOn IS NULL
+	GROUP BY
+		CD.UserKey,
+		CD.CardTypeKey
+	
+	IF(@UserCardType = 1 AND @ItemsLoaned > 5) --ADULTS
+	BEGIN
+		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = 
+	END
+	ELSE IF(@UserCardType = 2) --TEENS
+	BEGIN
+	END
+	ELSE --CHILDREN
+	BEGIN
+	END
+END
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 
@@ -365,8 +397,6 @@ select * from LibraryProject.Cards
 
 
 select * from LibraryProject.AssetLoans
-select * from LibraryProject.Assets
-select * from LibraryProject.AssetTypes
 select * from LibraryProject.Cards
 select * from LibraryProject.AssetLoans
 select * from LibraryProject.Assets
