@@ -11,7 +11,7 @@ CREATE OR ALTER PROCEDURE LibraryProject.spCreateNewAssetType
 AS
 BEGIN
 	DECLARE @DoYouExist int = 0
-	DECLARE @ErrorStatement varchar(25) = 'Asset Type Already Exists'
+	DECLARE @ErrorStatement varchar(30) = 'Asset Type Already Exists'
 	SELECT
 		@DoYouExist = COUNT(LPAT.AssetTypeKey)
 
@@ -34,6 +34,36 @@ BEGIN
 	END
 END;
 
+CREATE OR ALTER PROCEDURE LibraryProject.spUpdateAssetPrepFees
+	@AssetTypeKey INT,
+	@PrepFee MONEY
+AS
+BEGIN
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorStatement varchar(30) = 'Asset Type Does not exist'
+	SELECT
+		@DoYouExist = COUNT(LPAT.AssetTypeKey)
+
+	FROM
+		LibraryProject.AssetTypes LPAT
+
+	WHERE
+		LPAT.AssetTypeKey = @AssetTypeKey
+	IF (@DoYouExist > 0)
+		BEGIN
+			UPDATE 
+			LibraryProject.AssetTypes 
+			SET 
+				PreperationFees = @PrepFee 
+			WHERE 
+				AssetTypeKey = @AssetTypeKey
+		END
+	ELSE
+		BEGIN
+			PRINT @ErrorStatement
+		END
+	 
+END;
 
 CREATE OR ALTER PROCEDURE LibraryProject.spCreateAsset
 		@Asset VARCHAR(50),
@@ -156,6 +186,8 @@ END;
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 
+EXEC LibraryProject.spUpdateAssetPrepFees 4, 2.99;
+
 EXEC LibraryProject.spCreateAsset 'a book','none','1','20','1';
 
 EXEC LibraryProject.spUpdateAsset  '9', 'a dvd','none', 2, 20, 1;
@@ -174,7 +206,7 @@ select *from LibraryProject.AssetTypes
 select *from LibraryProject.Assets
 select *from LibraryProject.Users
 select * from LibraryProject.Cards
-*/
+
 
 
 select * from LibraryProject.AssetLoans
@@ -185,3 +217,4 @@ select * from LibraryProject.CardTypes
 select * from LibraryProject.Fees
 select * from LibraryProject.Users
 
+*/
