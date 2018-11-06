@@ -1,16 +1,41 @@
-CREATE PROCEDURE LibraryProject.spCreateNewAssetType
+ALTER TABLE LibraryProject.AssetTypes
+ADD PreperationFees MONEY NOT NULL
+DEFAULT $0.99;
+
+
+UPDATE LibraryProject.AssetTypes ATS SET ATS.PreperationFees = $1.99 WHERE ATS.AssetTypeKey = 2
+
+
+CREATE OR ALTER PROCEDURE LibraryProject.spCreateNewAssetType
 	@AssetType VARCHAR(50)
 AS
 BEGIN
-	INSERT INTO LibraryProject.AssetTypes
-	(
-		AssetType
-	)
-	VALUES (@AssetType)
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorStatement varchar(25) = 'Asset Type Already Exists'
+	SELECT
+		@DoYouExist = COUNT(LPAT.AssetTypeKey)
+
+	FROM
+		LibraryProject.AssetTypes LPAT
+
+	WHERE
+		UPPER(LPAT.AssetType) = UPPER(@AssetType)
+	IF (@DoYouExist = 0)
+	BEGIN
+		INSERT INTO LibraryProject.AssetTypes
+		(
+			AssetType
+		)
+		VALUES (@AssetType)
+	END
+	ELSE
+	BEGIN
+	PRINT @ErrorStatement
+	END
 END;
 
 
-CREATE PROCEDURE LibraryProject.spCreateAsset
+CREATE OR ALTER PROCEDURE LibraryProject.spCreateAsset
 		@Asset VARCHAR(50),
 		@AssetDescription VARCHAR(50),
 		@AssetTypeKey INT,
@@ -30,7 +55,7 @@ BEGIN
 END;
 
 
-CREATE PROCEDURE LibraryProject.spUpdateAsset
+CREATE OR ALTER PROCEDURE LibraryProject.spUpdateAsset
 		@AssetKey INT,
 		@Asset VARCHAR(50),
 		@AssetDescription VARCHAR(50),
@@ -45,7 +70,7 @@ BEGIN
 END
 
 
-CREATE PROCEDURE LibraryProject.spDeactivateAsset
+CREATE OR ALTER PROCEDURE LibraryProject.spDeactivateAsset
 		@AssetKey INT
 AS
 BEGIN
@@ -55,7 +80,7 @@ BEGIN
 END
 
 
-CREATE PROCEDURE LibraryProject.spAddOrUpdateUser
+CREATE OR ALTER PROCEDURE LibraryProject.spAddOrUpdateUser
 		@Add_Update VARCHAR(6),
 		@UserKey INT,
 		@LastName VARCHAR(50),
@@ -93,7 +118,7 @@ BEGIN
 	END
 END
 
-CREATE PROCEDURE LibraryProject.spIssueCard
+CREATE OR ALTER PROCEDURE LibraryProject.spIssueCard
 	@CardNum VARCHAR(11),
 	@UserKey INT,
 	@CardType INT
@@ -109,7 +134,7 @@ BEGIN
 END;
 
 
-CREATE PROCEDURE LibraryProject.spDeactivateCard
+CREATE OR ALTER PROCEDURE LibraryProject.spDeactivateCard
 	@CardKey INT
 AS
 BEGIN
@@ -119,7 +144,7 @@ BEGIN
 END;
 
 --Loan Assets
-CREATE PROCEDURE LibraryProject.spLoanAsset
+CREATE OR ALTER PROCEDURE LibraryProject.spLoanAsset
 	@AssetKey
 	@
 AS
@@ -151,4 +176,12 @@ select *from LibraryProject.Users
 select * from LibraryProject.Cards
 */
 
+
+select * from LibraryProject.AssetLoans
+select * from LibraryProject.Assets
+select * from LibraryProject.AssetTypes
+select * from LibraryProject.Cards
+select * from LibraryProject.CardTypes
+select * from LibraryProject.Fees
+select * from LibraryProject.Users
 
