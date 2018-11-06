@@ -308,26 +308,33 @@ BEGIN
 	WHERE FeeKey = @FeeKey
 END;
 
-CREATE OR ALTER TRIGGER VerifyUserRestrictedCheckout
+CREATE OR ALTER TRIGGER [LibraryProject].[VerifyUser]
 ON LibraryProject.AssetLoans
 AFTER INSERT
 AS
 BEGIN
-	DECLARE @repUser INT = NULL
-	DECLARE @LoanId INT = NULL
+	DECLARE @UserCardType INT
+	DECLARE @AssetLoanKeyID INT
+	DECLARE @NotOldEnough varchar(50) = 'You are not old enough'
 	SELECT
-		@repUser = PU.ResponsibleUserKey,
-		@LoanId = AL.AssetLoanKey 
+		@UserCardType = CD.CardTypeKey,
+		@AssetLoanKeyID = i.AssetLoanKey 
 	FROM 
-		LibraryProject.AssetLoans AL INNER JOIN LibraryProject.Users PU ON AL.UserKey = PU.UserKey
-	IF(@repUser <> 1)
+		inserted i 
+		INNER JOIN LibraryProject.AssetLoans AL ON i.AssetLoanKey = AL.AssetLoanKey
+		INNER JOIN LibraryProject.Cards CD ON i.UserKey = CD.UserKey
+	
+	IF(@UserCardType <> 1)
 	BEGIN
-		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @LoanId
+		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanKeyID
+		PRINT @NotOldEnough
 	END
 
-END
+END;
 
-
+CREATE OR ALTER TRIGGER LibraryProject.CheckLimitOfAssets
+ON LibraryProject.AssetLoans
+AFTER INSERT
 
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
@@ -348,6 +355,8 @@ EXEC LibraryProject.spIssueCard 'C9079-647-9065','7','1'
 
 EXEC LibraryProject.spDeactivateCard '8'
 
+EXEC LibraryProject.spLoanAsset(
+
 select *from LibraryProject.AssetTypes
 select *from LibraryProject.Assets
 select *from LibraryProject.Users
@@ -359,8 +368,20 @@ select * from LibraryProject.AssetLoans
 select * from LibraryProject.Assets
 select * from LibraryProject.AssetTypes
 select * from LibraryProject.Cards
+select * from LibraryProject.AssetLoans
+select * from LibraryProject.Assets
 select * from LibraryProject.CardTypes
 select * from LibraryProject.Fees
 select * from LibraryProject.Users
 
 */
+
+INSERT INTO LibraryProject.AssetLoans VALUES(7, 3, '9/15/2018', '10/26/2018', NULL)
+
+DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '6'
+
+SELECT
+		CD.CardTypeKey,
+		AL.AssetLoanKey 
+	FROM 
+		LibraryProject.AssetLoans AL INNER JOIN LibraryProject.Cards CD ON AL.UserKey = CD.UserKey
