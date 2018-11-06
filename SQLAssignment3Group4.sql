@@ -307,6 +307,28 @@ BEGIN
 	SET Paid = 1, Amount = 0
 	WHERE FeeKey = @FeeKey
 END;
+
+CREATE OR ALTER TRIGGER VerifyUserRestrictedCheckout
+ON LibraryProject.AssetLoans
+AFTER INSERT
+AS
+BEGIN
+	DECLARE @repUser INT = NULL
+	DECLARE @LoanId INT = NULL
+	SELECT
+		@repUser = PU.ResponsibleUserKey,
+		@LoanId = AL.AssetLoanKey 
+	FROM 
+		LibraryProject.AssetLoans AL INNER JOIN LibraryProject.Users PU ON AL.UserKey = PU.UserKey
+	IF(@repUser <> 1)
+	BEGIN
+		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @LoanId
+	END
+
+END
+
+
+
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 
