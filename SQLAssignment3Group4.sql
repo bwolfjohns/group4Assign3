@@ -262,13 +262,50 @@ END;
 
 --Loan Assets
 CREATE OR ALTER PROCEDURE LibraryProject.spLoanAsset
-	@AssetKey
-	@
+	@AssetKey INT,
+	@UserKey INT
 AS
 BEGIN
-	UPDATE LibraryProject.Cards
-	SET DeactivatedOn = GETDATE()
-	WHERE CardKey = @CardKey
+	INSERT INTO LibraryProject.AssetLoans
+	(
+		AssetKey,
+		UserKey,
+		LoanedOn
+	)
+	VALUES	(@AssetKey,@UserKey,GETDATE())
+END;
+
+
+CREATE OR ALTER PROCEDURE LibraryProject.spLoanReturnAsset
+	@AssetLoanKey INT
+	
+AS
+BEGIN
+	UPDATE LibraryProject.AssetLoans
+	SET ReturnedOn = GETDATE()
+	WHERE AssetLoanKey = @AssetLoanKey
+END;
+
+
+CREATE OR ALTER PROCEDURE LibraryProject.spAssetLost
+	@AssetLoanKey INT
+	
+AS
+BEGIN
+	UPDATE LibraryProject.AssetLoans
+	SET LostOn = GETDATE()
+	WHERE AssetLoanKey = @AssetLoanKey
+END;
+
+
+
+CREATE OR ALTER PROCEDURE LibraryProject.spPayFee
+	@FeeKey INT
+AS
+BEGIN
+	UPDATE LibraryProject.Fees
+	SET Paid = 1, Amount = 0
+	WHERE FeeKey = @FeeKey
 END;
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
