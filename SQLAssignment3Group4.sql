@@ -94,9 +94,34 @@ CREATE OR ALTER PROCEDURE LibraryProject.spUpdateAsset
 		@Restricted BIT
 AS
 BEGIN
-	Update LibraryProject.Assets
-	SET Asset = @Asset,AssetDescription = @AssetDescription, AssetTypeKey = @AssetTypeKey,ReplacementCost = @ReplacementCost,Restricted = @Restricted
-	WHERE AssetKey = @AssetKey
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorStatement varchar(30) = 'Asset Does Not Exist'
+	SELECT
+		@DoYouExist = COUNT(LPUA.AssetKey)
+
+	FROM
+		LibraryProject.Assets LPUA
+
+	WHERE
+		LPUA.AssetTypeKey = @AssetTypeKey
+	IF (@DoYouExist > 0)
+		BEGIN
+			UPDATE 
+				LibraryProject.Assets
+			SET	
+				Asset = @Asset,
+				AssetDescription = @AssetDescription, 
+				AssetTypeKey = @AssetTypeKey,
+				ReplacementCost = @ReplacementCost,
+				Restricted = @Restricted
+			WHERE 
+				AssetKey = @AssetKey
+		END
+	ELSE
+		BEGIN
+			PRINT @ErrorStatement
+		END
+	
 END
 
 
@@ -122,29 +147,91 @@ CREATE OR ALTER PROCEDURE LibraryProject.spAddOrUpdateUser
 		@StateAbb CHAR(2),--StateAbbreviation
 		@Bdate DATE,--Birthdate
 		@Ruk INT--ResponsibleUserKey
+		
 AS
 BEGIN
-	IF (@Add_Update = 'add' OR @Add_Update = 'Add')
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorMessage varchar(100) = 'Must have Add or Update as first variable to Use spAddOrUpdateUser'
+	DECLARE @ErrorMesAllreadyExists varchar(100) = 'User already exists'
+	DECLARE @ErrorMesDoesntExist varchar(100) = 'This User Does Not Exist'
+
+	IF (UPPER(@Add_Update) = 'ADD')
+		SELECT
+			@DoYouExist = COUNT(LPUU.UserKey)
+
+		FROM
+			LibraryProject.Users LPUU
+
+		WHERE
+			UPPER(LPUU.LastName) = UPPER(@LastName)
+			AND
+			UPPER(LPUU.FirstName) = UPPER(@FirstName)
+			AND
+			UPPER(LPUU.Address1) = UPPER(@Address1)
+			AND
+			UPPER(LPUU.City) = UPPER(@City)
+			AND 
+			UPPER(LPUU.StateAbbreviation) = UPPER(@StateAbb)
+			AND
+			LPUU.Birthdate = @Bdate
+			AND
+			UPPER(LPUU.Email) = UPPER(@Email)
+
+		IF(@DoYouExist = 0)
+		BEGIN
+			INSERT INTO LibraryProject.Users
+			(
+				LastName,
+				FirstName,
+				Email,
+				Address1,
+				Address2,
+				City,
+				StateAbbreviation,
+				BirthDate,
+				ResponsibleUserKey
+			)
+			VALUES	(@LastName,@FirstName,@Email,@Address1,@Address2,@City,@StateAbb,@Bdate,@Ruk)
+		END
+		IF(@DoYouExist > 0)
+		BEGIN
+			PRINT @ErrorMesAllreadyExists
+		END
+	ELSE IF (UPPER(@Add_Update) = 'UPDATE')
+	SELECT
+			@DoYouExist = COUNT(LPUU.UserKey)
+
+		FROM
+			LibraryProject.Users LPUU
+
+		WHERE
+			LPUU.UserKey = @UserKey
+
+		IF(@DoYouExist > 0)
+		BEGIN
+			UPDATE 
+				LibraryProject.Users
+			SET	
+				LastName = @LastName,
+				FirstName = @FirstName,
+				Email = @Email,
+				Address1 = @Address1,
+				Address2 = @Address2,
+				City = @City,
+				StateAbbreviation = @StateAbb,
+				Birthdate = @Bdate,
+				ResponsibleUserKey = @Ruk
+			WHERE 
+				UserKey = @UserKey
+		END
+		IF(@DoYouExist = 0)
+		BEGIN
+			PRINT @ErrorMesDoesntExist
+		END
+	
+	ELSE
 	BEGIN
-		INSERT INTO LibraryProject.Users
-		(
-			LastName,
-			FirstName,
-			Email,
-			Address1,
-			Address2,
-			City,
-			StateAbbreviation,
-			BirthDate,
-			ResponsibleUserKey
-		)
-		VALUES	(@LastName,@FirstName,@Email,@Address1,@Address2,@City,@StateAbb,@Bdate,@Ruk)
-	END
-	IF (@Add_Update = 'update' OR @Add_Update = 'Update')
-	BEGIN
-		UPDATE LibraryProject.Users
-		SET LastName = @LastName,FirstName = @FirstName,Email = @Email,Address1 = @Address1,Address2 = @Address2,City = @City,StateAbbreviation = @StateAbb,Birthdate = @Bdate,ResponsibleUserKey = @Ruk
-		WHERE UserKey = @UserKey
+	PRINT @ErrorMessage
 	END
 END
 
