@@ -1,8 +1,29 @@
-
---alter table to add preparation fees to asset types
 ALTER TABLE LibraryProject.AssetTypes
 ADD PreperationFees MONEY NOT NULL
 DEFAULT $0.99;
+
+
+UPDATE LibraryProject.AssetTypes ATS SET ATS.PreperationFees = $1.99 WHERE ATS.AssetTypeKey = 2
+
+--Add ten items to the Asset table
+
+SET IDENTITY_INSERT LibraryProject.Assets ON
+
+INSERT 
+	LibraryProject.Assets (AssetKey, Asset, AssetDescription, AssetTypeKey, ReplacementCost, Restricted) 
+VALUES 
+	(9,'OathBringer','Book 3 of the Stormlight Archives by BrandonSanderson',2,24.19,0),
+	(10,'Mistborn','First book in the Mistborn trilogy by Brandon Sanderson',2,9.89,0),
+	(11,'Fight Club','R rated movie staring Brad Pitt and Edward Norton',1,14.99,1),
+	(12,'The Shining','A Horror thriller by Stephen King',2,6.29,1),
+	(13,'Misery','A Horror thriller by Stephen King',2,7.55,1),
+	(14,'Misery','R rated thriller movie starring James Cann and Kathy Bates',1,10.99,1),
+	(15,'Despicable Me','PG rated childrens movie starring Steve Carell',1,15.99,0),
+	(16,'The Nightmare Before Christmas','PG rated stop motion musical featuring the music of Danny Elfman',1,20.05,0),
+	(17,'Wackey Wednesday','A Childrens book by Dr. Suess',2,19.25,0),
+	(18,'Singing in the Rain','A musical movie starring Debbie Reynolds and Gene Kelley',1,5.69,0)
+
+ SET IDENTITY_INSERT LibraryProject.Assets OFF
 
  --add new asset type stored proc.
 CREATE OR ALTER PROCEDURE LibraryProject.spCreateNewAssetType
@@ -157,6 +178,7 @@ END
 
 CREATE OR ALTER PROCEDURE LibraryProject.spAddOrUpdateUser
 		@Add_Update VARCHAR(6),
+		@UserKey INT,
 		@LastName VARCHAR(50),
 		@FirstName VARCHAR(50),
 		@Email VARCHAR(50),
@@ -522,36 +544,49 @@ SET LostOn = GETDATE()
 WHERE AssetKey = 1 AND UserKey = 6
 
 
+--Fee Function
+CREATE OR ALTER FUNCTION LibraryProject.CalculateFees(@LoanedOn AS DATE,@ReturnedOn AS DATE,@LostOn AS DATE)
+RETURNS MONEY
+AS
+BEGIN
+	Declare @Cost MONEY = 0
+	Declare @Days INT = 0
+	IF (@ReturnedOn IS NOT NULL)
+	BEGIN
+		IF (@LostOn IS NOT NULL)
+		BEGIN
+			--set cost = to price of asset
+		END
+		ELSE
+		BEGIN
+			IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 3 AND DATEDIFF(day,@LoanedOn,GETDATE()) < 7)
+			BEGIN
+				@Cost = 1.00
+			END
+			ELSE IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 6 AND DATEDIFF(day,@LoanedOn,GETDATE()) < 15)
+			BEGIN 
+				@Cost = 3.00
+			END
+			ELSE IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 14)
+			BEGIN 
+				@Cost = 3.00
+			END
+		END
 
+	END
 
-EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
-EXEC LibraryProject.spCreateNewAssetType 'Digital Book';
+	RETURN (@Cost)
+END;
 
-EXEC LibraryProject.spUpdateAssetPrepFees 4, 1.69;
-EXEC LibraryProject.spUpdateAssetPrepFees 3, 2.99;
-
---insert 10 assets
-EXEC LibraryProject.spCreateAsset 'OathBringer','Book 3 of the Stormlight Archives by BrandonSanderson',4,24.19,0
-EXEC LibraryProject.spCreateAsset 'Mistborn','First book in the Mistborn trilogy by Brandon Sanderson',4,9.89,0
-EXEC LibraryProject.spCreateAsset 'Fight Club','R rated movie staring Brad Pitt and Edward Norton',1,14.99,1
-EXEC LibraryProject.spCreateAsset 'The Shining','A Horror thriller by Stephen King',3,6.29,1
-EXEC LibraryProject.spCreateAsset 'Misery','A Horror thriller by Stephen King',3,7.55,1
-EXEC LibraryProject.spCreateAsset 'Misery','R rated thriller movie starring James Cann and Kathy Bates',1,10.99,1
-EXEC LibraryProject.spCreateAsset 'Despicable Me','PG rated childrens movie starring Steve Carell',1,15.99,0
-EXEC LibraryProject.spCreateAsset 'The Nightmare Before Christmas','PG rated stop motion musical featuring the music of Danny Elfman',1,20.05,0
-EXEC LibraryProject.spCreateAsset 'Wackey Wednesday','A Childrens book by Dr. Suess',4,19.25,0
-EXEC LibraryProject.spCreateAsset 'Singing in the Rain','A musical movie starring Debbie Reynolds and Gene Kelley',1,5.69,0
-
---insert 3 users
-
-EXEC LibraryProject.spAddOrUpdateUser 'add','Joe','Adams','joeadams@fakemail.com','123 N 456 S',NULL,'Ogden','UT','7/1/1930',0
-EXEC LibraryProject.spAddOrUpdateUser 'add','Joe','Smith','js@fake.com','123 Fake St',NULL,'Ogden','UT','12/23/1805',0
-EXEC LibraryProject.spAddOrUpdateUser 'add','Abraham','Lincoln','honestabe@president.gov','1600 Pennsylvania Ave NW',NULL,'Washington','DC','2/12/1809',0
 
 /*Testing purposes
+EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 
-EXEC LibraryProject.spUpdateAsset  '10', 'Mistborn', 'First book in the Mistborn trilogy by Brandon Sanderson', 3, 35.99, 0;
-EXEC LibraryProject.spUpdateAsset  '11', 'Fight Club', 'A novel by Chuck Palahniuk', 3, 22.50, 0;
+EXEC LibraryProject.spUpdateAssetPrepFees 4, 2.99;
+
+EXEC LibraryProject.spCreateAsset 'a book','none','1','20','1';
+
+EXEC LibraryProject.spUpdateAsset  '9', 'a dvd','none', 2, 20, 1;
 
 EXEC LibraryProject.spDeactivateAsset '9';
 
@@ -608,3 +643,10 @@ SELECT
 	GROUP BY
 		AL.AssetLoanKey,
 		AL.LostOn
+
+
+
+		--testing
+
+		DECLARE @LoanedOn DATE = '6-nov-2018'
+		SELECT DATEDIFF(day,@LoanedOn,GETDATE())
