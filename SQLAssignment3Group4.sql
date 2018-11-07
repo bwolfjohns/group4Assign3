@@ -5,7 +5,27 @@ DEFAULT $0.99;
 
 UPDATE LibraryProject.AssetTypes ATS SET ATS.PreperationFees = $1.99 WHERE ATS.AssetTypeKey = 2
 
+--Add ten items to the Asset table
 
+SET IDENTITY_INSERT LibraryProject.Assets ON
+
+INSERT 
+	LibraryProject.Assets (AssetKey, Asset, AssetDescription, AssetTypeKey, ReplacementCost, Restricted) 
+VALUES 
+	(9,'OathBringer','Book 3 of the Stormlight Archives by BrandonSanderson',2,24.19,0),
+	(10,'Mistborn','First book in the Mistborn trilogy by Brandon Sanderson',2,9.89,0),
+	(11,'Fight Club','R rated movie staring Brad Pitt and Edward Norton',1,14.99,1),
+	(12,'The Shining','A Horror thriller by Stephen King',2,6.29,1),
+	(13,'Misery','A Horror thriller by Stephen King',2,7.55,1),
+	(14,'Misery','R rated thriller movie starring James Cann and Kathy Bates',1,10.99,1),
+	(15,'Despicable Me','PG rated childrens movie starring Steve Carell',1,15.99,0),
+	(16,'The Nightmare Before Christmas','PG rated stop motion musical featuring the music of Danny Elfman',1,20.05,0),
+	(17,'Wackey Wednesday','A Childrens book by Dr. Suess',2,19.25,0),
+	(18,'Singing in the Rain','A musical movie starring Debbie Reynolds and Gene Kelley',1,5.69,0)
+
+ SET IDENTITY_INSERT LibraryProject.Assets OFF
+
+ --add new asset type stored proc.
 CREATE OR ALTER PROCEDURE LibraryProject.spCreateNewAssetType
 	@AssetType VARCHAR(50)
 AS
@@ -34,6 +54,8 @@ BEGIN
 	END
 END;
 
+
+--update asset prep fees, because the asset prep fees default to $0.99 add ability to change it
 CREATE OR ALTER PROCEDURE LibraryProject.spUpdateAssetPrepFees
 	@AssetTypeKey INT,
 	@PrepFee MONEY
@@ -65,6 +87,8 @@ BEGIN
 	 
 END;
 
+
+--create new asset stored proc.
 CREATE OR ALTER PROCEDURE LibraryProject.spCreateAsset
 		@Asset VARCHAR(50),
 		@AssetDescription VARCHAR(50),
@@ -84,7 +108,7 @@ BEGIN
 	VALUES	(@Asset,@AssetDescription,@AssetTypeKey,@ReplacementCost,@Restricted)
 END;
 
-
+--update asset stored proc
 CREATE OR ALTER PROCEDURE LibraryProject.spUpdateAsset
 		@AssetKey INT,
 		@Asset VARCHAR(50),
@@ -103,7 +127,7 @@ BEGIN
 		LibraryProject.Assets LPUA
 
 	WHERE
-		LPUA.AssetTypeKey = @AssetTypeKey
+		LPUA.AssetKey = @AssetKey
 	IF (@DoYouExist > 0)
 		BEGIN
 			UPDATE 
@@ -124,14 +148,31 @@ BEGIN
 	
 END
 
-
+--deactivate asset that is in use
 CREATE OR ALTER PROCEDURE LibraryProject.spDeactivateAsset
 		@AssetKey INT
 AS
 BEGIN
-	UPDATE LibraryProject.Assets
-	SET DeactivatedOn = GetDate()
-	WHERE AssetKey = @AssetKey
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorStatement varchar(30) = 'Asset Does Not Exist'
+	SELECT
+		@DoYouExist = COUNT(LPUA.AssetKey)
+
+	FROM
+		LibraryProject.Assets LPUA
+
+	WHERE
+		LPUA.AssetTypeKey = @AssetKey
+	IF (@DoYouExist > 0)
+	BEGIN
+		UPDATE LibraryProject.Assets
+		SET DeactivatedOn = GetDate()
+		WHERE AssetKey = @AssetKey
+	END
+	ELSE
+	BEGIN
+		PRINT @ErrorStatement
+	END
 END
 
 
@@ -235,12 +276,51 @@ BEGIN
 	END
 END
 
+--DEACTIVATE USER CARD
+CREATE OR ALTER PROCEDURE LibraryProject.spDeactivateCard
+	@CardKey INT,
+	@UserKey INT
+AS
+BEGIN
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorStatement varchar(30) = 'Card Does Not Exist'
+	SELECT
+		@DoYouExist = COUNT(CD.UserKey),
+		@CardKey = CD.CardKey
+
+	FROM
+		LibraryProject.Cards CD
+
+	WHERE
+		CD.UserKey = @UserKey
+	GROUP BY
+		CD.CardKey
+	IF(@DoYouExist > 0)
+	BEGIN
+		UPDATE LibraryProject.Cards
+		SET DeactivatedOn = GETDATE()
+		WHERE CardKey = @CardKey
+	END
+END;
+
+
 CREATE OR ALTER PROCEDURE LibraryProject.spIssueCard
 	@CardNum VARCHAR(11),
 	@UserKey INT,
 	@CardType INT
 AS
 BEGIN
+	DECLARE @DoYouExist int = 0
+	SELECT
+		@DoYouExist = COUNT(CD.UserKey)
+
+	FROM
+		LibraryProject.Cards CD
+
+	WHERE
+		CD.UserKey = @UserKey
+	IF(@DoYouExist = 0)
+	BEGIN
 	INSERT INTO LibraryProject.Cards
 	(
 		CardNumber,
@@ -248,17 +328,13 @@ BEGIN
 		CardTypeKey
 	)
 	VALUES (@CardNum,@UserKey,@CardType)
+	END
+	ELSE
+	BEGIN
+		EXEC LibraryProject.spDeactivateCard @UserKey
+	END
 END;
 
-
-CREATE OR ALTER PROCEDURE LibraryProject.spDeactivateCard
-	@CardKey INT
-AS
-BEGIN
-	UPDATE LibraryProject.Cards
-	SET DeactivatedOn = GETDATE()
-	WHERE CardKey = @CardKey
-END;
 
 --Loan Assets
 CREATE OR ALTER PROCEDURE LibraryProject.spLoanAsset
@@ -308,7 +384,7 @@ BEGIN
 	WHERE FeeKey = @FeeKey
 END;
 
-CREATE OR ALTER TRIGGER [LibraryProject].[VerifyUser]
+CREATE OR ALTER TRIGGER LibraryProject.VerifyUser
 ON LibraryProject.AssetLoans
 AFTER INSERT
 AS
@@ -340,8 +416,13 @@ BEGIN
 	DECLARE @UserKey INT
 	DECLARE @UserCardType INT
 	DECLARE @ItemsLoaned INT
-	DECLARE @AssetLoanKeyID INT = inserted.AssetLoanKey
-	DECLARE @ErrorMsg varchar(50) = CONCAT('You have exceded the asset loan limit of ', @ItemsLoaned)
+	DECLARE @AssetLoanInsKey INT
+	DECLARE @ErrorMsg varchar(50) = CONCAT(CONCAT('You have exceded the asset loan limit of ', @ItemsLoaned), ' Items.')
+
+	SELECT
+		@AssetLoanInsKey = AssetLoanKey
+	FROM
+		inserted
 
 	SELECT 
 		@ItemsLoaned = COUNT(AL.AssetLoanKey), 
@@ -357,15 +438,17 @@ BEGIN
 		CD.UserKey,
 		CD.CardTypeKey
 	
-	IF(@UserCardType = 1 AND @ItemsLoaned > 5) --ADULTS
+	IF(@UserCardType = 1 AND @ItemsLoaned > 6) --ADULTS
 	BEGIN
-		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = 
+		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanInsKey
 	END
-	ELSE IF(@UserCardType = 2) --TEENS
+	ELSE IF(@UserCardType = 2 AND @ItemsLoaned > 4) --TEENS
 	BEGIN
+		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanInsKey
 	END
-	ELSE --CHILDREN
+	ELSE IF(@UserCardType = 3 AND @ItemsLoaned > 2) --CHILDREN
 	BEGIN
+		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanInsKey
 	END
 END
 /*Testing purposes

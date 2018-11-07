@@ -113,6 +113,7 @@ VALUES
 
 SET IDENTITY_INSERT LibraryProject.Assets ON 
 
+
 CREATE TABLE LibraryProject.AssetLoans
 (
 	AssetLoanKey int IDENTITY(1,1) PRIMARY KEY NOT NULL,
