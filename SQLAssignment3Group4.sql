@@ -342,13 +342,45 @@ CREATE OR ALTER PROCEDURE LibraryProject.spLoanAsset
 	@UserKey INT
 AS
 BEGIN
-	INSERT INTO LibraryProject.AssetLoans
-	(
-		AssetKey,
-		UserKey,
-		LoanedOn
-	)
-	VALUES	(@AssetKey,@UserKey,GETDATE())
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorStatement varchar(50) = 'Asset Is already checked out'
+	DECLARE @LostItem DATE
+	DECLARE @LoanKey INT
+	DECLARE @LostStatement varchar(50)
+	SELECT
+		@DoYouExist = COUNT(AL.AssetKey),
+		@LoanKey = AL.AssetLoanKey,
+		@LostItem = AL.LostOn
+
+	FROM
+		LibraryProject.AssetLoans AL
+
+	WHERE
+		AL.ReturnedOn IS NULL
+		AND
+		AL.AssetKey = @AssetKey
+	GROUP BY
+		AL.LostOn,
+		AL.AssetLoanKey
+	IF(@DoYouExist = 0)
+	BEGIN
+		INSERT INTO LibraryProject.AssetLoans
+		(
+			AssetKey,
+			UserKey,
+			LoanedOn
+		)
+		VALUES	(@AssetKey,@UserKey,GETDATE())
+	END
+	ELSE IF (@LostItem IS NOT NULL)
+	BEGIN
+		SET @LostStatement = CONCAT('Item was reported lost on ', @LostItem)
+		PRINT @LostStatement
+	END
+	ELSE
+	BEGIN
+		PRINT @ErrorStatement
+	END
 END;
 
 
@@ -357,9 +389,41 @@ CREATE OR ALTER PROCEDURE LibraryProject.spLoanReturnAsset
 	
 AS
 BEGIN
-	UPDATE LibraryProject.AssetLoans
-	SET ReturnedOn = GETDATE()
-	WHERE AssetLoanKey = @AssetLoanKey
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorStatement varchar(30) = 'Asset has not been Loaned'
+	DECLARE @LostError DATE
+	DECLARE @LostStatement varchar(50)
+	SELECT
+		@DoYouExist = COUNT(AL.AssetKey),
+		@LostError = AL.LostOn
+
+	FROM
+		LibraryProject.AssetLoans AL
+
+	WHERE
+		AL.AssetLoanKey = @AssetLoanKey
+		AND
+		AL.ReturnedOn IS NULL
+	GROUP BY
+		AL.LostOn
+	IF(@DoYouExist > 0)
+	BEGIN
+		IF(@LostError IS NULL)
+		BEGIN
+		UPDATE LibraryProject.AssetLoans
+		SET ReturnedOn = GETDATE()
+		WHERE AssetLoanKey = @AssetLoanKey
+		END
+		ELSE
+		BEGIN
+		SET @LostStatement = CONCAT('Item was reported lost on ', @LostError)
+		PRINT @LostStatement
+		END
+	END
+	ELSE
+	BEGIN
+		PRINT @ErrorStatement
+	END
 END;
 
 
@@ -368,9 +432,32 @@ CREATE OR ALTER PROCEDURE LibraryProject.spAssetLost
 	
 AS
 BEGIN
-	UPDATE LibraryProject.AssetLoans
-	SET LostOn = GETDATE()
-	WHERE AssetLoanKey = @AssetLoanKey
+	DECLARE @DoYouExist int = 0
+	DECLARE @ErrorStatement varchar(30) = 'Asset loan does not exist'
+	SELECT
+		@DoYouExist = COUNT(AL.AssetKey)
+
+	FROM
+		LibraryProject.AssetLoans AL
+
+	WHERE
+		AL.AssetLoanKey = @AssetLoanKey
+		AND
+		AL.LoanedOn IS NOT NULL
+		AND
+		AL.ReturnedOn IS NULL
+
+	IF(@DoYouExist > 0)
+	BEGIN
+		UPDATE LibraryProject.AssetLoans
+		SET LostOn = GETDATE()
+		WHERE AssetLoanKey = @AssetLoanKey
+	END
+	ELSE
+	BEGIN
+		PRINT @ErrorStatement
+	END
+
 END;
 
 
@@ -451,6 +538,11 @@ BEGIN
 		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanInsKey
 	END
 END
+
+UPDATE LibraryProject.AssetLoans
+SET LostOn = GETDATE()
+WHERE AssetKey = 1 AND UserKey = 6
+
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 
@@ -470,7 +562,11 @@ EXEC LibraryProject.spIssueCard 'C9079-647-9065','7','1'
 
 EXEC LibraryProject.spDeactivateCard '8'
 
-EXEC LibraryProject.spLoanAsset(
+EXEC LibraryProject.spLoanAsset '11', '6'
+
+EXEC LibraryProject.spAssetLost '12'
+
+EXEC LibraryProject.spLoanReturnAsset '9'
 
 select *from LibraryProject.AssetTypes
 select *from LibraryProject.Assets
@@ -498,3 +594,16 @@ SELECT
 		AL.AssetLoanKey 
 	FROM 
 		LibraryProject.AssetLoans AL INNER JOIN LibraryProject.Cards CD ON AL.UserKey = CD.UserKey
+
+SELECT
+		COUNT(AL.AssetKey),
+		AL.AssetLoanKey,
+		AL.LostOn
+
+	FROM
+		LibraryProject.AssetLoans AL
+	WHERE
+		AL.ReturnedOn IS NULL
+	GROUP BY
+		AL.AssetLoanKey,
+		AL.LostOn
