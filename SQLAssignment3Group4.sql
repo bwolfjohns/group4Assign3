@@ -543,6 +543,42 @@ UPDATE LibraryProject.AssetLoans
 SET LostOn = GETDATE()
 WHERE AssetKey = 1 AND UserKey = 6
 
+
+--Fee Function
+CREATE OR ALTER FUNCTION LibraryProject.CalculateFees(@LoanedOn AS DATE,@ReturnedOn AS DATE,@LostOn AS DATE)
+RETURNS MONEY
+AS
+BEGIN
+	Declare @Cost MONEY = 0
+	Declare @Days INT = 0
+	IF (@ReturnedOn IS NOT NULL)
+	BEGIN
+		IF (@LostOn IS NOT NULL)
+		BEGIN
+			--set cost = to price of asset
+		END
+		ELSE
+		BEGIN
+			IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 3 AND DATEDIFF(day,@LoanedOn,GETDATE()) < 7)
+			BEGIN
+				@Cost = 1.00
+			END
+			ELSE IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 6 AND DATEDIFF(day,@LoanedOn,GETDATE()) < 15)
+			BEGIN 
+				@Cost = 3.00
+			END
+			ELSE IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 14)
+			BEGIN 
+				@Cost = 3.00
+			END
+		END
+
+	END
+
+	RETURN (@Cost)
+END;
+
+
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 
@@ -607,3 +643,10 @@ SELECT
 	GROUP BY
 		AL.AssetLoanKey,
 		AL.LostOn
+
+
+
+		--testing
+
+		DECLARE @LoanedOn DATE = '6-nov-2018'
+		SELECT DATEDIFF(day,@LoanedOn,GETDATE())
