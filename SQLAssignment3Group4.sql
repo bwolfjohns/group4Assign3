@@ -70,7 +70,7 @@ END;
 --create new asset stored proc.
 CREATE OR ALTER PROCEDURE LibraryProject.spCreateAsset
 		@Asset VARCHAR(50),
-		@AssetDescription VARCHAR(50),
+		@AssetDescription VARCHAR(250),
 		@AssetTypeKey INT,
 		@ReplacementCost MONEY,
 		@Restricted BIT
@@ -78,7 +78,7 @@ AS
 BEGIN
 	INSERT INTO LibraryProject.Assets
 	(
-		Asset ,
+		Asset,
 		AssetDescription,
 		AssetTypeKey,
 		ReplacementCost,
@@ -125,7 +125,7 @@ BEGIN
 			PRINT @ErrorStatement
 		END
 	
-END
+END;
 
 --deactivate asset that is in use
 CREATE OR ALTER PROCEDURE LibraryProject.spDeactivateAsset
@@ -159,10 +159,10 @@ CREATE OR ALTER PROCEDURE LibraryProject.spAddUser
 		
 		@LastName VARCHAR(50),
 		@FirstName VARCHAR(50),
-		@Email VARCHAR(50),
-		@Address1 VARCHAR(50),
-		@Address2 VARCHAR(30),
-		@City VARCHAR(30),
+		@Email VARCHAR(100),
+		@Address1 VARCHAR(250),
+		@Address2 VARCHAR(50),
+		@City VARCHAR(50),
 		@StateAbb CHAR(2),--StateAbbreviation
 		@Bdate DATE,--Birthdate
 		@RespibilityKey INT--ResponsibleUserKey
@@ -213,8 +213,7 @@ BEGIN
 		BEGIN
 			PRINT @ErrorMesAllreadyExists
 		END
-
-END
+END;
 
 CREATE OR ALTER PROCEDURE LibraryProject.spUpdateUser
 	@UserKeyId INT,
@@ -261,7 +260,7 @@ DECLARE @ErrorMesDoesntExist varchar(100) = 'This User Does Not Exist'
 		BEGIN
 			PRINT @ErrorMesDoesntExist
 		END
-END
+END;
 
 --DEACTIVATE USER CARD
 CREATE OR ALTER PROCEDURE LibraryProject.spDeactivateCard
@@ -460,7 +459,7 @@ END;
 
 --Thanks for giving this example in class. 
 --My other trigger broke after 1
-DROP TRIGGER LibraryProject.VerifyUser
+
 CREATE OR ALTER TRIGGER LibraryProject.VerifyUser
 ON LibraryProject.AssetLoans
 INSTEAD OF INSERT
@@ -531,9 +530,7 @@ BEGIN
 	END
 END
 
-UPDATE LibraryProject.AssetLoans
-SET LostOn = GETDATE()
-WHERE AssetKey = 1 AND UserKey = 6
+
 
 CREATE OR ALTER FUNCTION  LibraryProject.CalculatePrepFees(@assetKey AS INT)
 RETURNS MONEY
@@ -634,9 +631,9 @@ EXEC LibraryProject.spCreateAsset 'Singing in the Rain','A musical movie starrin
 
 --insert 3 users
 
-EXEC LibraryProject.spAddOrUpdateUser 'add',NULL,'Joe','Adams','joeadams@fakemail.com','123 N 456 S',NULL,'Ogden','UT','7/1/1930',0
-EXEC LibraryProject.spAddOrUpdateUser 'add',NULL,'Joe','Smith','js@fake.com','123 Fake St',NULL,'Ogden','UT','12/23/1805',0
-EXEC LibraryProject.spAddOrUpdateUser 'add',NULL,'Abraham','Lincoln','honestabe@president.gov','1600 Pennsylvania Ave NW',NULL,'Washington','DC','2/12/1809',0
+EXEC LibraryProject.spAddUser 'Adams','Joe','joeadams@fakemail.com','123 N 456 S',NULL,'Ogden','UT','7/1/1930',NULL
+EXEC LibraryProject.spAddUser 'Joe','Smith','js@fake.com','123 Fake St',NULL,'Ogden','UT','12/23/1805',0
+EXEC LibraryProject.spAddUser 'Abraham','Lincoln','honestabe@president.gov','1600 Pennsylvania Ave NW',NULL,'Washington','DC','2/12/1809',0
 
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
