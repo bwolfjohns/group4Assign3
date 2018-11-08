@@ -3,7 +3,7 @@ ADD PreperationFees MONEY NOT NULL
 DEFAULT $0.99;
 
 
-UPDATE LibraryProject.AssetTypes ATS SET ATS.PreperationFees = $1.99 WHERE ATS.AssetTypeKey = 2
+UPDATE LibraryProject.AssetTypes SET PreperationFees = $1.99 WHERE AssetTypeKey = 2
 
 --Add ten items to the Asset table
 
@@ -543,40 +543,79 @@ UPDATE LibraryProject.AssetLoans
 SET LostOn = GETDATE()
 WHERE AssetKey = 1 AND UserKey = 6
 
-
---Fee Function
-CREATE OR ALTER FUNCTION LibraryProject.CalculateFees(@LoanedOn AS DATE,@ReturnedOn AS DATE,@LostOn AS DATE)
+CREATE OR ALTER FUNCTION  LibraryProject.CalculatePrepFees(@assetKey AS INT)
 RETURNS MONEY
 AS
 BEGIN
+	DECLARE @PrepFee MONEY = 0
+	SELECT @PrepFee = ATAT.PreperationFees FROM LibraryProject.Assets AST
+	INNER JOIN LibraryProject.AssetTypes ATAT ON AST.AssetTypeKey = ATAT.AssetTypeKey
+	RETURN @PrepFee
+END
+
+
+--Fee Function
+CREATE OR ALTER FUNCTION LibraryProject.CalculateFees(@assetLoanKey AS INT)
+RETURNS MONEY
+AS
+BEGIN
+	DECLARE @ReturnedOn DATE = NULL
+	DECLARE @LoanedOn DATE = NULL
+	DECLARE @LostOn DATE = NULL
+	DECLARE @KeyOfAsset INT = 0
 	Declare @Cost MONEY = 0
 	Declare @Days INT = 0
+	SELECT 
+		@LoanedOn = AL.LoanedOn,
+		@ReturnedOn = AL.ReturnedOn,
+		@LostOn = AL.LostOn,
+		@KeyOfAsset = AL.AssetKey
+	FROM 
+		LibraryProject.AssetLoans AL 
+	WHERE 
+		AL.AssetKey = @assetLoanKey
+	DECLARE @ERROR_MESSAGE1 varchar(50) = 'This asset has not been returned or reported lost'
+	
 	IF (@ReturnedOn IS NOT NULL)
 	BEGIN
-		IF (@LostOn IS NOT NULL)
+	SET @Days = DATEDIFF(day, @LoanedOn,@ReturnedOn)
+		IF (@Days < 25)
 		BEGIN
-			--set cost = to price of asset
+			SET @Cost = 0
+		END
+		ELSE IF(@Days > 24 AND @Days < 29)
+		BEGIN
+			SET @Cost = 1.00
+		END
+		ELSE IF(@Days > 28 AND @Days < 36)
+		BEGIN
+			SET @Cost = 2.00
 		END
 		ELSE
 		BEGIN
-			IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 3 AND DATEDIFF(day,@LoanedOn,GETDATE()) < 7)
-			BEGIN
-				@Cost = 1.00
-			END
-			ELSE IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 6 AND DATEDIFF(day,@LoanedOn,GETDATE()) < 15)
-			BEGIN 
-				@Cost = 3.00
-			END
-			ELSE IF (DATEDIFF(day,@LoanedOn,GETDATE()) > 14)
-			BEGIN 
-				@Cost = 3.00
-			END
+			SET @Cost = 3.00
 		END
+	END
+	ELSE IF(@LostOn IS NOT NULL)
+	BEGIN
+		DECLARE @AssetPrice MONEY = 0
+		DECLARE @PreperationFee MONEY = 0
+		EXEC LibraryProject.CalculatePrepFees(8)
+		EXEC @PreperationFee = LibraryProject.CalculatePrepFees(@KeyOfAsset)
+		
+		SELECT
+			@AssetPrice = AST.ReplacementCost
+		FROM
+			LibraryProject.Assets AST
+		WHERE 
+			AST.AssetKey = @KeyOfAsset
+		IF(@AssetPrice < 29.99)
+		BEGIN
 
 	END
-
 	RETURN (@Cost)
 END;
+
 
 
 /*Testing purposes
