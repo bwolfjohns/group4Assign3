@@ -1,0 +1,17 @@
+
+Ben
+
+finish triggers
+views
+Find a way to insert on fee table
+teen checkout book deal
+run views test
+
+
+Cole
+
+Constrant for replacement cost of any item exceeding 29.99
+pay fees stored procedure
+lost book tyler durden
+keyser soze address change
+return 3 items of your choice
