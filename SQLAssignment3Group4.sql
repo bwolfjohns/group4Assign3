@@ -458,29 +458,34 @@ BEGIN
 	WHERE FeeKey = @FeeKey
 END;
 
+--Thanks for giving this example in class. 
+--My other trigger broke after 1
+DROP TRIGGER LibraryProject.VerifyUser
 CREATE OR ALTER TRIGGER LibraryProject.VerifyUser
 ON LibraryProject.AssetLoans
-AFTER INSERT
+INSTEAD OF INSERT
 AS
 BEGIN
-	DECLARE @UserCardType INT
-	DECLARE @AssetLoanKeyID INT
-	DECLARE @NotOldEnough varchar(50) = 'You are not old enough'
+	INSERT LibraryProject.AssetLoans(AssetKey,UserKey,LoanedOn)
 	SELECT
-		@UserCardType = CD.CardTypeKey,
-		@AssetLoanKeyID = i.AssetLoanKey 
-	FROM 
-		inserted i 
-		INNER JOIN LibraryProject.AssetLoans AL ON i.AssetLoanKey = AL.AssetLoanKey
-		INNER JOIN LibraryProject.Cards CD ON i.UserKey = CD.UserKey
-	
-	IF(@UserCardType <> 1)
-	BEGIN
-		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanKeyID
-		PRINT @NotOldEnough
-	END
-
-END;
+		i.AssetKey,
+		i.UserKey,
+		GETDATE()
+	FROM
+		inserted i
+		INNER JOIN LibraryProject.Assets A ON i.AssetKey = A.AssetKey
+		INNER JOIN LibraryProject.Users U ON i.UserKey = U.UserKey
+		INNER JOIN LibraryProject.Cards C ON U.UserKey = C.UserKey
+		AND C.DeactivatedOn IS NULL
+	WHERE
+	(CASE 
+		WHEN 
+			C.CardTypeKey IN (2,3) 
+			AND A.Restricted = 1 
+		THEN 1 
+		ELSE 0 
+	END) = 0
+END
 
 CREATE OR ALTER TRIGGER LibraryProject.CheckLimitOfAssets
 ON LibraryProject.AssetLoans
@@ -675,9 +680,13 @@ select * from LibraryProject.Users
 
 */
 
-INSERT INTO LibraryProject.AssetLoans VALUES(7, 3, '9/15/2018', '10/26/2018', NULL)
+INSERT INTO LibraryProject.AssetLoans 
+VALUES
+	(7, 3, '9/15/2018', '10/26/2018', NULL),
+	(5, 2, '9/15/2018', '10/26/2018', NULL),
+	(3, 3, '9/15/2018', '10/26/2018', NULL)
 
-DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '6'
+DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '6' OR AssetLoanKey = '7'
 
 SELECT
 		CD.CardTypeKey,
