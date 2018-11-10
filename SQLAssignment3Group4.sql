@@ -452,10 +452,48 @@ CREATE OR ALTER PROCEDURE LibraryProject.spPayFee
 	@FeeKey INT
 AS
 BEGIN
-	UPDATE LibraryProject.Fees
-	SET Paid = 1, Amount = 0
-	WHERE FeeKey = @FeeKey
+	DECLARE @DoYouExist int = 0
+	DECLARE @Paid bit = 0
+	DECLARE @ErrorStatement varchar(30) = 'This fee does not exist'
+	SELECT
+		@DoYouExist = COUNT(LPF.FeeKey)
+
+	FROM
+		LibraryProject.Fees LPF
+	WHERE
+		LPF.FeeKey = @FeeKey
+
+		--
+	SELECT
+		@Paid = Paid
+	FROM
+		LibraryProject.Fees LPF
+
+	WHERE
+		LPF.FeeKey = @FeeKey
+
+	IF (@DoYouExist > 0)
+	BEGIN
+		IF(@paid = 0)
+		BEGIN
+			UPDATE 
+			LibraryProject.Fees 
+			SET Paid = 1
+			WHERE FeeKey = @FeeKey
+		END
+		ELSE
+		BEGIN
+			PRINT 'Fee already paid'
+		END
+	END
+	ELSE
+	BEGIN
+		PRINT @ErrorStatement
+	END
+
 END;
+
+
 
 --Thanks for giving this example in class. 
 --My other trigger broke after 1
@@ -706,7 +744,3 @@ SELECT
 
 
 
-		--testing
-
-		DECLARE @LoanedOn DATE = '6-nov-2018'
-		SELECT DATEDIFF(day,@LoanedOn,GETDATE())
