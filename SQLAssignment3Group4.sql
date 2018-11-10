@@ -3,6 +3,9 @@ ALTER TABLE LibraryProject.AssetTypes
 ADD PreperationFees MONEY NOT NULL
 DEFAULT $0.99;
 
+--Alter table to add constraint for fees
+ALTER TABLE LibraryProject.Fees
+ADD CONSTRAINT MaxCost	CHECK (Amount < 30)
 
  --add new asset type stored proc.
 CREATE OR ALTER PROCEDURE LibraryProject.spCreateNewAssetType
@@ -678,6 +681,7 @@ EXEC LibraryProject.spAssetLost '2'
 EXEC LibraryProject.spDeactivateAsset '2'
 EXEC LibraryProject.spDeactivateCard '5' ,'5'
 
+EXEC LibraryProject.CalculateFees 2
 
 
 
