@@ -673,6 +673,17 @@ EXEC LibraryProject.spAddUser 'Adams','Joe','joeadams@fakemail.com','123 N 456 S
 EXEC LibraryProject.spAddUser 'Joe','Smith','js@fake.com','123 Fake St',NULL,'Ogden','UT','12/23/1805',0
 EXEC LibraryProject.spAddUser 'Abraham','Lincoln','honestabe@president.gov','1600 Pennsylvania Ave NW',NULL,'Washington','DC','2/12/1809',0
 
+--Lost book (Tyler Durden )
+EXEC LibraryProject.spAssetLost '2'
+EXEC LibraryProject.spDeactivateAsset '2'
+EXEC LibraryProject.spDeactivateCard '5' ,'5'
+
+
+
+
+
+
+
 /*Testing purposes
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 
