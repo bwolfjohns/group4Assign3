@@ -771,13 +771,13 @@ EXEC LibraryProject.CalculateFees 2
 
 
 --Return 3 assets
-LibraryProject.spLoanReturnAsset 3
-LibraryProject.spLoanReturnAsset 4
-LibraryProject.spLoanReturnAsset 5
-LibraryProject.spLoanReturnAsset 6
+EXEC LibraryProject.spLoanReturnAsset 3
+EXEC LibraryProject.spLoanReturnAsset 4
+EXEC LibraryProject.spLoanReturnAsset 5
+EXEC LibraryProject.spLoanReturnAsset 6
 
 --Keyser Soze  Address change
-LibraryProject.spUpdateUser '6', 'Soze', 'Keyser','KSoze@gmai.com','4242 Not Here', NULL, 'Plain City', 'UT', NULL
+EXEC LibraryProject.spUpdateUser '6', 'Soze', 'Keyser','KSoze@gmai.com','4242 Not Here', NULL, 'Plain City', 'UT', NULL
 
 
 /*Testing purposes
@@ -837,12 +837,6 @@ drop table LibraryProject.AssetTypes
 
 */
 
-INSERT INTO LibraryProject.AssetLoans 
-VALUES
-	(38, 4, '9/15/2018', NULL, NULL),
-	(5, 2, '8/15/2018', '10/26/2018', NULL),
-	(38, 3, '9/15/2018', NULL, '10/26/2018')
 
-DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '36' OR AssetLoanKey = '37' OR AssetLoanKey = '38' 
 
 
