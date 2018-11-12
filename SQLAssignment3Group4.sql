@@ -655,7 +655,38 @@ BEGIN
 	RETURN (@Cost)
 END;
 
+CREATE OR ALTER VIEW LibraryProject.V_OVERDUE_BOOKS
+AS
+SELECT 
+	AST.Asset,
+	AST.AssetDescription,
+	AL.LoanedOn,
+	CASE 
+		WHEN
+		U.ResponsibleUserKey IS NOT NULL 
+		THEN CONCAT(LP.FirstName, LP.LastName)
+		ELSE CONCAT(U.FirstName,U.LastName) 
+	END AS name_of_user
+FROM LibraryProject.AssetLoans AL
+	INNER JOIN LibraryProject.Assets AST ON AL.AssetKey = AST.AssetKey
+	INNER JOIN LibraryProject.Users U ON AL.UserKey = U.UserKey
+	INNER JOIN
+	(
+		SELECT 
+			USR.FirstName, 
+			USR.LastName, 
+			USR.ResponsibleUserKey 
+		FROM 
+			LibraryProject.Users USR
+	) LP ON LP.ResponsibleUserKey = U.UserKey
+WHERE 
+	AL.ReturnedOn IS NULL 
+	AND 
+	AL.LostOn IS NULL
+	AND
+	(DATEDIFF(day,AL.LoanedOn, GETDATE()) > 21)
 
+SELECT * FROM V_OVERDUE_BOOKS
 SELECT ALT.AssetLoanKey FROM LibraryProject.AssetLoans ALT
 
 
