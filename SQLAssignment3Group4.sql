@@ -508,11 +508,14 @@ ON LibraryProject.AssetLoans
 INSTEAD OF INSERT
 AS
 BEGIN
-	INSERT LibraryProject.AssetLoans(AssetKey,UserKey,LoanedOn)
+	INSERT LibraryProject.AssetLoans(AssetKey,UserKey,LoanedOn,ReturnedOn,LostOn)
 	SELECT
 		i.AssetKey,
 		i.UserKey,
-		GETDATE()
+		i.LoanedOn,
+		i.ReturnedOn,
+		i.LostOn
+		
 	FROM 
 		inserted i
 		INNER JOIN LibraryProject.Assets A ON i.AssetKey = A.AssetKey
@@ -574,8 +577,7 @@ BEGIN
 END
 
 
-
-
+--PREP FEE FUNCTION
 CREATE OR ALTER FUNCTION  LibraryProject.CalculatePrepFees(@assetKey AS INT)
 RETURNS MONEY
 AS
@@ -652,6 +654,12 @@ BEGIN
 	END
 	RETURN (@Cost)
 END;
+
+
+SELECT ALT.AssetLoanKey FROM LibraryProject.AssetLoans ALT
+
+
+SELECT LibraryProject.CalculateFees()
 
 
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
@@ -743,70 +751,9 @@ select * from LibraryProject.Users
 INSERT INTO LibraryProject.AssetLoans 
 VALUES
 	(38, 4, '9/15/2018', NULL, NULL),
-	(5, 2, '9/15/2018', '10/26/2018', NULL),
-	(38, 3, '9/15/2018', '10/26/2018', NULL)
+	(5, 2, '8/15/2018', '10/26/2018', NULL),
+	(38, 3, '9/15/2018', NULL, '10/26/2018')
 
-DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '8' OR AssetLoanKey = '12' 
+DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '36' OR AssetLoanKey = '37' OR AssetLoanKey = '38' 
 
-SELECT
-		CD.CardTypeKey,
-		AL.AssetLoanKey 
-	FROM 
-		LibraryProject.AssetLoans AL INNER JOIN LibraryProject.Cards CD ON AL.UserKey = CD.UserKey
 
-SELECT
-		COUNT(AL.AssetKey),
-		AL.AssetLoanKey,
-		AL.LostOn
-
-	FROM
-		LibraryProject.AssetLoans AL
-	WHERE
-		AL.ReturnedOn IS NULL
-	GROUP BY
-		AL.AssetLoanKey,
-		AL.LostOn
-
-DECLARE @insertedTable TABLE
-(
-AssetKey INT,
-UserKey INT,
-LoanedOn DATE
-)
-INSERT @insertedTable(AssetKey,UserKey,LoanedOn)
-VALUES(16,2, GETDATE())
-SELECT
-	i.AssetKey,
-	i.UserKey,
-	i.LoanedOn,
-	ALST.LoanedOn,
-	ALST.ReturnedOn,
-	ALST.LostOn,
-	ALST.AssetLoanKey
-	FROM 
-		@insertedTable i INNER JOIN
-		(
-			SELECT 
-				COUNT(ALS.UserKey) AS itemsOut,
-				ALS.UserKey,
-				CDS.CardTypeKey
-			FROM 
-				LibraryProject.AssetLoans ALS
-				INNER JOIN LibraryProject.Cards CDS ON ALS.UserKey = CDS.UserKey
-			WHERE
-				ALS.ReturnedOn IS NULL
-				AND
-				ALS.LostOn IS NULL
-				AND
-				CDS.DeactivatedOn IS NULL
-			GROUP BY
-				ALS.UserKey,
-				CDS.CardTypeKey
-		) AL ON i.UserKey = AL.UserKey
-		INNER JOIN LibraryProject.Assets AST ON i.AssetKey = AST.AssetKey
-		INNER JOIN LibraryProject.AssetLoans ALST ON ALST.AssetKey = i.AssetKey
-(CASE
-	WHEN ALST.AssetLoanKey IS NULL
-	THEN 1
-	ELSE 2
-END)
