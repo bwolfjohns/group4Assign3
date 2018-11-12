@@ -553,6 +553,8 @@ BEGIN
 			AND A.Restricted = 1 
 		THEN 4
 		--MAKES IT SO AN ITEM CANNOT BE CHECK OUT TWICE THROUGH DIRECT INSERT
+		--still gives a problem when inserting the same resource number at the same time, but won't let you direct 
+		--insert a resource that has already been written to the table.
 		WHEN 
 			EXISTS 
 			(
@@ -709,13 +711,13 @@ EXEC LibraryProject.spIssueCard 'C9079-647-9065','7','1'
 EXEC LibraryProject.spDeactivateCard '8'
 
 EXEC LibraryProject.spLoanAsset '11', '1'
-EXEC LibraryProject.spLoanAsset '39', '3'
+EXEC LibraryProject.spLoanAsset '38', '3'
 EXEC LibraryProject.spLoanAsset '40', '3'
 EXEC LibraryProject.spLoanAsset '41', '3'
 
 EXEC LibraryProject.spLoanReturnAsset '3'
-EXEC LibraryProject.spLoanReturnAsset '13'
-EXEC LibraryProject.spLoanReturnAsset '14'
+EXEC LibraryProject.spLoanReturnAsset '31'
+EXEC LibraryProject.spLoanReturnAsset '28'
 
 EXEC LibraryProject.spAssetLost '12'
 
@@ -742,7 +744,7 @@ INSERT INTO LibraryProject.AssetLoans
 VALUES
 	(38, 4, '9/15/2018', NULL, NULL),
 	(5, 2, '9/15/2018', '10/26/2018', NULL),
-	(3, 3, '9/15/2018', '10/26/2018', NULL)
+	(38, 3, '9/15/2018', '10/26/2018', NULL)
 
 DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '8' OR AssetLoanKey = '12' 
 
