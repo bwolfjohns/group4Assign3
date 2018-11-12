@@ -406,6 +406,7 @@ BEGIN
 		SET @LostStatement = CONCAT('Item was reported lost on ', @LostError)
 		PRINT @LostStatement
 		END
+		EXEC LibraryProject.spInsertFee @AssetLoanKey
 	END
 	ELSE
 	BEGIN
@@ -440,6 +441,7 @@ BEGIN
 		UPDATE LibraryProject.AssetLoans
 		SET LostOn = GETDATE()
 		WHERE AssetLoanKey = @AssetLoanKey
+		EXEC LibraryProject.spInsertFee @AssetLoanKey
 	END
 	ELSE
 	BEGIN
@@ -576,13 +578,23 @@ BEGIN
 END
 
 CREATE OR ALTER PROCEDURE LibraryProject.spInsertFee
-	@Cost MONEY,
-	@UserKey INT,
-	@Paid MONEY,
-	@AssetKey INT
+	@AssetLoanKey INT
 AS
 BEGIN
-	INSERT INTO LibraryProject.Fees(Amount,UserKey,Paid) VALUES(@Cost, @UserKey, @Paid)
+	DECLARE @FeeCost MONEY
+	DECLARE @UserKey INT
+	DECLARE @Paid INT = 0
+
+	SET @FeeCost = (SELECT LibraryProject.CalculateFees(@AssetLoanKey))
+	IF(@FeeCost > 0)
+	BEGIN
+	SELECT 
+		@UserKey = AL.UserKey 
+	FROM 
+		LibraryProject.AssetLoans AL 
+	WHERE 
+		AL.AssetLoanKey = @AssetLoanKey
+	INSERT INTO LibraryProject.Fees(Amount,UserKey,Paid) VALUES(@FeeCost, @UserKey, @Paid)
 	EXEC('
 	CREATE OR ALTER VIEW LibraryProject.V_ASSET_FEES
 	AS
@@ -610,7 +622,8 @@ BEGIN
 		INNER JOIN LibraryProject.Users U ON ALT.UserKey = U.UserKey
 		WHERE 
 		AST.AssetKey = @AssetKey
-		')		
+		')
+	END		
 END
 
 
