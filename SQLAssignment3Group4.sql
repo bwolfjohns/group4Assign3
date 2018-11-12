@@ -7,7 +7,7 @@ DEFAULT $0.99;
 ALTER TABLE LibraryProject.Fees
 ADD CONSTRAINT MaxCost	CHECK (Amount < 30)
 
- --add new asset type stored proc.
+--add new asset type stored proc.
 CREATE OR ALTER PROCEDURE LibraryProject.spCreateNewAssetType
 	@AssetType VARCHAR(50)
 AS
@@ -227,7 +227,6 @@ CREATE OR ALTER PROCEDURE LibraryProject.spUpdateUser
 	@Address2 VARCHAR(30),
 	@City VARCHAR(30),
 	@StateAbb CHAR(2),--StateAbbreviation
-	@Bdate DATE,--Birthdate
 	@RespibilityKey INT--ResponsibleUserKey
 AS
 BEGIN
@@ -254,7 +253,6 @@ DECLARE @ErrorMesDoesntExist varchar(100) = 'This User Does Not Exist'
 				Address2 = @Address2,
 				City = @City,
 				StateAbbreviation = @StateAbb,
-				Birthdate = @Bdate,
 				ResponsibleUserKey = @RespibilityKey
 			WHERE 
 				UserKey = @UserKeyId
@@ -726,8 +724,14 @@ EXEC LibraryProject.spDeactivateCard '5' ,'5'
 EXEC LibraryProject.CalculateFees 2
 
 
+--Return 3 assets
+LibraryProject.spLoanReturnAsset 3
+LibraryProject.spLoanReturnAsset 4
+LibraryProject.spLoanReturnAsset 5
+LibraryProject.spLoanReturnAsset 6
 
-
+--Keyser Soze  Address change
+LibraryProject.spUpdateUser '6', 'Soze', 'Keyser','KSoze@gmai.com','4242 Not Here', NULL, 'Plain City', 'UT', NULL
 
 
 /*Testing purposes
@@ -771,11 +775,19 @@ select * from LibraryProject.Cards
 
 select * from LibraryProject.AssetLoans
 select * from LibraryProject.Cards
-select * from LibraryProject.AssetLoans
 select * from LibraryProject.Assets
 select * from LibraryProject.CardTypes
 select * from LibraryProject.Fees
 select * from LibraryProject.Users
+
+drop table LibraryProject.AssetLoans 
+drop table LibraryProject.cards
+drop table LibraryProject.Assets
+drop table LibraryProject.CardTypes
+drop table LibraryProject.Fees
+drop table LibraryProject.Users
+drop table LibraryProject.AssetTypes
+
 
 */
 
