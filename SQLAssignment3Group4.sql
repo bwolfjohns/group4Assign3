@@ -602,7 +602,7 @@ BEGIN
 		AST.Asset,
 		AST.AssetDescription,
 		ALT.LoanedOn,
-		@Cost [ASSET_FEE],
+		@FeeCost [ASSET_FEE],
 		CASE 
 		WHEN
 		U.ResponsibleUserKey IS NOT NULL 
