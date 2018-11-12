@@ -574,6 +574,45 @@ BEGIN
 	END ) = 0
 END
 
+CREATE OR ALTER PROCEDURE LibraryProject.spInsertFee
+	@Cost MONEY,
+	@UserKey INT,
+	@Paid MONEY,
+	@AssetKey INT
+AS
+BEGIN
+	INSERT INTO LibraryProject.Fees(Amount,UserKey,Paid) VALUES(@Cost, @UserKey, @Paid)
+	EXEC('
+	CREATE OR ALTER VIEW LibraryProject.V_ASSET_FEES
+	AS
+	SELECT 
+		AST.Asset,
+		AST.AssetDescription,
+		ALT.LoanedOn,
+		@Cost [ASSET_FEE],
+		CASE 
+		WHEN
+		U.ResponsibleUserKey IS NOT NULL 
+		THEN 
+		(
+			SELECT 
+				CONCAT(CONCAT(LP.FirstName, '' ''),LP.LastName) 
+			FROM 
+				LibraryProject.Users LP
+			WHERE
+				LP.UserKey = U.ResponsibleUserKey	
+		)
+		ELSE CONCAT(CONCAT(U.FirstName,'' ''),U.LastName) 
+		END AS name_of_user
+		FROM LibraryProject.AssetLoans ALT
+		INNER JOIN LibraryProject.Assets AST ON ALT.AssetKey = AST.AssetKey
+		INNER JOIN LibraryProject.Users U ON ALT.UserKey = U.UserKey
+		WHERE 
+		AST.AssetKey = @AssetKey
+		')		
+END
+
+
 
 --PREP FEE FUNCTION
 CREATE OR ALTER FUNCTION  LibraryProject.CalculatePrepFees(@assetKey AS INT)
@@ -598,13 +637,21 @@ BEGIN
 	DECLARE @KeyOfAsset INT = 0
 	Declare @Cost MONEY = 0
 	Declare @Days INT = 0
+	DECLARE @UserKey INT = 0
 	SELECT 
 		@LoanedOn = AL.LoanedOn,
 		@ReturnedOn = AL.ReturnedOn,
 		@LostOn = AL.LostOn,
-		@KeyOfAsset = AL.AssetKey
+		@KeyOfAsset = AL.AssetKey,
+		@UserKey =
+		(CASE
+			WHEN U.ResponsibleUserKey IS NOT NULL
+			THEN U.ResponsibleUserKey
+			ELSE U.UserKey
+		END)
 	FROM 
 		LibraryProject.AssetLoans AL 
+		INNER JOIN LibraryProject.Users U ON AL.UserKey = U.UserKey
 	WHERE 
 		AL.AssetKey = @assetLoanKey
 	DECLARE @ERROR_MESSAGE1 varchar(50) = 'This asset has not been returned or reported lost'
@@ -650,6 +697,9 @@ BEGIN
 			SET @Cost = 29.99
 		END
 	END
+	IF @Cost > 0
+	BEGIN
+		EXEC LibraryProject.spInsertFee @Cost,@UserKey,0,@KeyOfAsset
 	RETURN (@Cost)
 END;
 
@@ -659,24 +709,24 @@ SELECT
 	AST.Asset,
 	AST.AssetDescription,
 	AL.LoanedOn,
+	U.ResponsibleUserKey,
 	CASE 
 		WHEN
 		U.ResponsibleUserKey IS NOT NULL 
-		THEN CONCAT(LP.FirstName, LP.LastName)
-		ELSE CONCAT(U.FirstName,U.LastName) 
+		THEN 
+		(
+			SELECT 
+				CONCAT(CONCAT(LP.FirstName, ' '),LP.LastName) 
+			FROM 
+				LibraryProject.Users LP
+			WHERE
+				LP.UserKey = U.ResponsibleUserKey	
+		)
+		ELSE CONCAT(CONCAT(U.FirstName,' '),U.LastName) 
 	END AS name_of_user
 FROM LibraryProject.AssetLoans AL
 	INNER JOIN LibraryProject.Assets AST ON AL.AssetKey = AST.AssetKey
 	INNER JOIN LibraryProject.Users U ON AL.UserKey = U.UserKey
-	INNER JOIN
-	(
-		SELECT 
-			USR.FirstName, 
-			USR.LastName, 
-			USR.ResponsibleUserKey 
-		FROM 
-			LibraryProject.Users USR
-	) LP ON LP.ResponsibleUserKey = U.UserKey
 WHERE 
 	AL.ReturnedOn IS NULL 
 	AND 
@@ -684,11 +734,7 @@ WHERE
 	AND
 	(DATEDIFF(day,AL.LoanedOn, GETDATE()) > 21)
 
-SELECT * FROM V_OVERDUE_BOOKS
-SELECT ALT.AssetLoanKey FROM LibraryProject.AssetLoans ALT
-
-
-SELECT LibraryProject.CalculateFees()
+SELECT * FROM LibraryProject.V_OVERDUE_BOOKS
 
 
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
