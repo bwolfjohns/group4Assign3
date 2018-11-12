@@ -700,6 +700,7 @@ BEGIN
 	IF @Cost > 0
 	BEGIN
 		EXEC LibraryProject.spInsertFee @Cost,@UserKey,0,@KeyOfAsset
+	END
 	RETURN (@Cost)
 END;
 
@@ -767,7 +768,8 @@ EXEC LibraryProject.spAssetLost '2'
 EXEC LibraryProject.spDeactivateAsset '2'
 EXEC LibraryProject.spDeactivateCard '5' ,'5'
 
-EXEC LibraryProject.CalculateFees 2
+Declare @num Int
+set @Num = LibraryProject.CalculateFees(2)
 
 
 --Return 3 assets
