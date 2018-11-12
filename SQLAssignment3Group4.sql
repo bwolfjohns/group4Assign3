@@ -638,6 +638,7 @@ BEGIN
 	Declare @Cost MONEY = 0
 	Declare @Days INT = 0
 	DECLARE @UserKey INT = 0
+	DECLARE @ERROR_MESSAGE1 varchar(50) = 'This asset has not been returned or reported lost'
 	SELECT 
 		@LoanedOn = AL.LoanedOn,
 		@ReturnedOn = AL.ReturnedOn,
@@ -653,8 +654,8 @@ BEGIN
 		LibraryProject.AssetLoans AL 
 		INNER JOIN LibraryProject.Users U ON AL.UserKey = U.UserKey
 	WHERE 
-		AL.AssetKey = @assetLoanKey
-	DECLARE @ERROR_MESSAGE1 varchar(50) = 'This asset has not been returned or reported lost'
+		AL.AssetLoanKey = @assetLoanKey
+	
 	
 	IF (@ReturnedOn IS NOT NULL)
 	BEGIN
@@ -697,11 +698,8 @@ BEGIN
 			SET @Cost = 29.99
 		END
 	END
-	IF @Cost > 0
-	BEGIN
-		EXEC LibraryProject.spInsertFee @Cost,@UserKey,0,@KeyOfAsset
-	END
-	RETURN (@Cost)
+	
+	RETURN (@Cost) 
 END;
 
 CREATE OR ALTER VIEW LibraryProject.V_OVERDUE_BOOKS
@@ -737,6 +735,7 @@ WHERE
 
 SELECT * FROM LibraryProject.V_OVERDUE_BOOKS
 
+select LibraryProject.CalculateFees(3)
 
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 EXEC LibraryProject.spCreateNewAssetType 'Digital Book';
@@ -768,9 +767,12 @@ EXEC LibraryProject.spAssetLost '2'
 EXEC LibraryProject.spDeactivateAsset '2'
 EXEC LibraryProject.spDeactivateCard '5' ,'5'
 
-Declare @num Int
-set @Num = LibraryProject.CalculateFees(2)
+EXEC LibraryProject.CalculateFees 2
 
+SELECT LibraryProject.CalculateFees (1)
+
+SELECT LibraryProject.CalculateFees(41)
+SELECT * FROM LibraryProject.V_ASSET_FEES
 
 --Return 3 assets
 EXEC LibraryProject.spLoanReturnAsset 3
@@ -837,8 +839,9 @@ drop table LibraryProject.Users
 drop table LibraryProject.AssetTypes
 
 
+
+
+
+
 */
-
-
-
-
+SELECT DATEDIFF(day,'2018-09-15','2018-10-26')
