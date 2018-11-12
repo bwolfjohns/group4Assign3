@@ -421,6 +421,7 @@ AS
 BEGIN
 	DECLARE @DoYouExist int = 0
 	DECLARE @ErrorStatement varchar(30) = 'Asset loan does not exist'
+	DECLARE @UserKey INT
 	SELECT
 		@DoYouExist = COUNT(AL.AssetKey)
 
@@ -698,7 +699,12 @@ BEGIN
 			SET @Cost = 29.99
 		END
 	END
-	
+	/*
+	IF (@Cost > 0)
+	BEGIN
+		EXEC LibraryProject.spInsertFee @Cost, @UserKey,0,@KeyOfAsset
+	END
+	*/
 	RETURN (@Cost) 
 END;
 
@@ -735,7 +741,7 @@ WHERE
 
 SELECT * FROM LibraryProject.V_OVERDUE_BOOKS
 
-select LibraryProject.CalculateFees(3)
+
 
 EXEC LibraryProject.spCreateNewAssetType 'Audio Book';
 EXEC LibraryProject.spCreateNewAssetType 'Digital Book';
@@ -767,12 +773,7 @@ EXEC LibraryProject.spAssetLost '2'
 EXEC LibraryProject.spDeactivateAsset '2'
 EXEC LibraryProject.spDeactivateCard '5' ,'5'
 
-EXEC LibraryProject.CalculateFees 2
-
-SELECT LibraryProject.CalculateFees (1)
-
-SELECT LibraryProject.CalculateFees(41)
-SELECT * FROM LibraryProject.V_ASSET_FEES
+EXEC LibraryProject.CalculateFees 1
 
 --Return 3 assets
 EXEC LibraryProject.spLoanReturnAsset 3
