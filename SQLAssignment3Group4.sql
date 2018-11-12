@@ -383,7 +383,7 @@ BEGIN
 	DECLARE @LostError DATE
 	DECLARE @LostStatement varchar(50)
 	SELECT
-		@DoYouExist = COUNT(AL.AssetKey),
+		@DoYouExist = COUNT(AL.AssetLoanKey),
 		@LostError = AL.LostOn
 
 	FROM
@@ -501,7 +501,9 @@ END;
 --Thanks for giving this example in class. 
 --My other trigger broke after 1
 
-CREATE OR ALTER TRIGGER LibraryProject.VerifyUser
+--THIS TRIGGER COMBINES BOTH OF THE TWO TRIGGERS ASKED FOR IN CLASS
+--OUTER JOINS WHERE KILLER ON THIS ONE.
+CREATE OR ALTER TRIGGER LibraryProject.trgLoanLimit
 ON LibraryProject.AssetLoans
 INSTEAD OF INSERT
 AS
@@ -511,65 +513,64 @@ BEGIN
 		i.AssetKey,
 		i.UserKey,
 		GETDATE()
-	FROM
+	FROM 
 		inserted i
 		INNER JOIN LibraryProject.Assets A ON i.AssetKey = A.AssetKey
 		INNER JOIN LibraryProject.Users U ON i.UserKey = U.UserKey
-		INNER JOIN LibraryProject.Cards C ON U.UserKey = C.UserKey
-		AND C.DeactivatedOn IS NULL
+		LEFT OUTER JOIN LibraryProject.Cards C ON U.UserKey = C.UserKey AND C.DeactivatedOn IS NULL
+		LEFT JOIN
+		(
+			SELECT 
+				COUNT(ALS.UserKey) AS itemsOut,
+				ALS.UserKey
+			FROM 
+				LibraryProject.AssetLoans ALS
+			WHERE
+				ALS.ReturnedOn IS NULL
+				AND
+				ALS.LostOn IS NULL
+			GROUP BY
+				ALS.UserKey
+		) AL ON i.UserKey = AL.UserKey
+		
 	WHERE
-	(CASE 
+
+	(CASE
+		WHEN 
+			C.CardTypeKey = 3
+			AND AL.itemsOut >= 2
+		THEN 2
+		WHEN
+			C.CardTypeKey = 2
+			AND AL.itemsOut >= 4
+		THEN 3
+		WHEN 
+			C.CardTypeKey = 1 
+			AND AL.itemsOut >= 6
+		THEN 1
 		WHEN 
 			C.CardTypeKey IN (2,3) 
 			AND A.Restricted = 1 
-		THEN 1 
-		ELSE 0 
-	END) = 0
+		THEN 4
+		--MAKES IT SO AN ITEM CANNOT BE CHECK OUT TWICE THROUGH DIRECT INSERT
+		WHEN 
+			EXISTS 
+			(
+				SELECT 
+					LPAL.LoanedOn 
+				FROM 
+					LibraryProject.AssetLoans LPAL 
+					INNER JOIN inserted INS ON LPAL.AssetKey = INS.AssetKey
+				WHERE 
+					LPAL.ReturnedOn IS NULL
+					AND
+					LPAL.LostOn IS NULL
+			)
+		THEN 5 
+		ELSE 0
+	END ) = 0
 END
 
-CREATE OR ALTER TRIGGER LibraryProject.CheckLimitOfAssets
-ON LibraryProject.AssetLoans
-AFTER INSERT
-AS
-BEGIN
-	DECLARE @UserKey INT
-	DECLARE @UserCardType INT
-	DECLARE @ItemsLoaned INT
-	DECLARE @AssetLoanInsKey INT
-	DECLARE @ErrorMsg varchar(50) = CONCAT(CONCAT('You have exceded the asset loan limit of ', @ItemsLoaned), ' Items.')
-
-	SELECT
-		@AssetLoanInsKey = AssetLoanKey
-	FROM
-		inserted
-
-	SELECT 
-		@ItemsLoaned = COUNT(AL.AssetLoanKey), 
-		@UserKey = CD.UserKey,
-		@UserCardType =  CD.CardTypeKey
-	FROM 
-		LibraryProject.Cards CD
-		INNER JOIN LibraryProject.AssetLoans AL ON CD.UserKey = AL.UserKey
-	WHERE 
-		AL.ReturnedOn IS NULL 
-		AND AL.LostOn IS NULL
-	GROUP BY
-		CD.UserKey,
-		CD.CardTypeKey
-	
-	IF(@UserCardType = 1 AND @ItemsLoaned > 6) --ADULTS
-	BEGIN
-		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanInsKey
-	END
-	ELSE IF(@UserCardType = 2 AND @ItemsLoaned > 4) --TEENS
-	BEGIN
-		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanInsKey
-	END
-	ELSE IF(@UserCardType = 3 AND @ItemsLoaned > 2) --CHILDREN
-	BEGIN
-		DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = @AssetLoanInsKey
-	END
-END
 
 
 
@@ -707,7 +708,14 @@ EXEC LibraryProject.spIssueCard 'C9079-647-9065','7','1'
 
 EXEC LibraryProject.spDeactivateCard '8'
 
-EXEC LibraryProject.spLoanAsset '11', '6'
+EXEC LibraryProject.spLoanAsset '11', '1'
+EXEC LibraryProject.spLoanAsset '39', '3'
+EXEC LibraryProject.spLoanAsset '40', '3'
+EXEC LibraryProject.spLoanAsset '41', '3'
+
+EXEC LibraryProject.spLoanReturnAsset '3'
+EXEC LibraryProject.spLoanReturnAsset '13'
+EXEC LibraryProject.spLoanReturnAsset '14'
 
 EXEC LibraryProject.spAssetLost '12'
 
@@ -732,11 +740,11 @@ select * from LibraryProject.Users
 
 INSERT INTO LibraryProject.AssetLoans 
 VALUES
-	(7, 3, '9/15/2018', '10/26/2018', NULL),
+	(38, 4, '9/15/2018', NULL, NULL),
 	(5, 2, '9/15/2018', '10/26/2018', NULL),
 	(3, 3, '9/15/2018', '10/26/2018', NULL)
 
-DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '6' OR AssetLoanKey = '7'
+DELETE FROM LibraryProject.AssetLoans WHERE AssetLoanKey = '8' OR AssetLoanKey = '12' 
 
 SELECT
 		CD.CardTypeKey,
@@ -757,5 +765,46 @@ SELECT
 		AL.AssetLoanKey,
 		AL.LostOn
 
-
-
+DECLARE @insertedTable TABLE
+(
+AssetKey INT,
+UserKey INT,
+LoanedOn DATE
+)
+INSERT @insertedTable(AssetKey,UserKey,LoanedOn)
+VALUES(16,2, GETDATE())
+SELECT
+	i.AssetKey,
+	i.UserKey,
+	i.LoanedOn,
+	ALST.LoanedOn,
+	ALST.ReturnedOn,
+	ALST.LostOn,
+	ALST.AssetLoanKey
+	FROM 
+		@insertedTable i INNER JOIN
+		(
+			SELECT 
+				COUNT(ALS.UserKey) AS itemsOut,
+				ALS.UserKey,
+				CDS.CardTypeKey
+			FROM 
+				LibraryProject.AssetLoans ALS
+				INNER JOIN LibraryProject.Cards CDS ON ALS.UserKey = CDS.UserKey
+			WHERE
+				ALS.ReturnedOn IS NULL
+				AND
+				ALS.LostOn IS NULL
+				AND
+				CDS.DeactivatedOn IS NULL
+			GROUP BY
+				ALS.UserKey,
+				CDS.CardTypeKey
+		) AL ON i.UserKey = AL.UserKey
+		INNER JOIN LibraryProject.Assets AST ON i.AssetKey = AST.AssetKey
+		INNER JOIN LibraryProject.AssetLoans ALST ON ALST.AssetKey = i.AssetKey
+(CASE
+	WHEN ALST.AssetLoanKey IS NULL
+	THEN 1
+	ELSE 2
+END)
